@@ -1,0 +1,43 @@
+name: Go player
+
+on:
+  push:
+    branches: [main, 'feat/go-player']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      - run: go test -race ./...
+      - run: go build -o .build/world-execute ./cmd/world-execute
+      - run: python3 tools/smoke_go.py
+      - run: python3 tools/build_go.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: go-player-source-builds
+          path: dist/go/
+
+  native:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./...
+      - run: go run ./cmd/world-execute --snapshot 38 --width 80 --height 24
